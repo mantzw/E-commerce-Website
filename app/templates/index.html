@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <h1> Welcome to Covid Commerce </h1> <!-- Work on styling with bootstrap in later iterations. -->
+
+    {% if searchForm %}
+    <form action="" method="POST">
+        Search for:
+        {{ searchForm.hidden_tag() }}
+        {{ searchForm.search_key() }}
+        {{ searchForm.submit(class="button") }}
+    </form>
+    {% endif %}
+
+    {% if sortForm %}
+    <form action="" method="POST">
+        Sort by:
+        {{ sortForm.hidden_tag() }}
+        {{ sortForm.sort_by(class="formselect") }}
+        {{ sortForm.submit(class="button") }}
+    </form>
+    {% endif %}
+
+    <br>
+    <div class="itemList">
+        {% for item in items %}
+            {% if item.initial_supply > item.num_purchased %}
+                <div class="item-box">
+                    <table>
+                        <tr>
+                            <td>
+                                {% include 'vague_item.html' %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                {% if current_user.is_seller == False %}
+                                <form action="{{ url_for('add_item',item_id=item.id) }}">
+                                    <input class="button cartButton" type="submit" value="Add to Cart">
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            {% endif %}
+            <br>
+        {% endfor %}
+    </div>
+
+{% endblock %}

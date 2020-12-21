@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <h1> Your items </h1> <!-- Work on styling with bootstrap in later iterations. -->
+
+    <!-- Implement sort items select field options in later iteration -->
+
+    <div class="itemList">
+        {% for item in items %}
+        <div class="item-box">
+            <table>
+                <tr>
+                    <td>
+                        {% include 'vague_item.html' %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <form action="{{ url_for('edit_item',item_id=item.id) }}">
+                            <input class="button cartButton" type="submit" value="Edit Item">
+                        </form>
+                    </td>
+                </tr>
+            </table>
+            <!-- <a href="{{ url_for('edit_item',item_id=item.id) }}" width = "35" > Edit item </a> -->
+        </div>
+        {% endfor %}
+    </div>
+    
+
+{% endblock %}

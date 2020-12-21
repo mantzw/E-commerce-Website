@@ -1,0 +1,26 @@
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <table>
+        <tr>
+            <td>
+                <a class="linkText" href="{{ url_for('detailed_item', item_id = item.id) }}"> {{ item.item_name }} </a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Rated: {{ "%.1f"|format(item.rating) }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {{ "$%.2f"|format(item.price) }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Seller: <a class="linkText" href="{{ url_for('seller_page', seller_username = item.supplier.username) }}"> {{ item.supplier.username }}</a>
+            </td>
+        </tr>
+    </table>
+{% endblock %}

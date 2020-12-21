@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+<!-- Using bootstrap to create the edit_item.html page. -->
+{% block app_content %}
+    <h1>{{ title }}</h1>
+    <div class="row">
+        <div class="col-md-6"> <!-- styling for how far we want fields to expand on the page, this is middle of the page. Grid system. -->
+            <!-- 
+                using bootstrap functionality to render a wt form, it will access the
+                 form data from forms.py and render it automatically.
+             -->
+            {{ wtf.quick_form(form) }} <!-- form is being passed through form the routes.py file. -->
+        </div>
+    </div>
+{% endblock %}

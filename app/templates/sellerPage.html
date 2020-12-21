@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <table class="table table-hover">
+        <tr>
+            <td>
+                <h1>Seller: {{ seller.username }}</h1>
+                {% if seller.about_seller %}
+                <p>{{ seller.about_seller }}</p>
+                {% endif %}
+
+                {% if seller == current_user %}
+                <p>
+                    <!-- <a href="{{ url_for('edit_profile') }}">Edit your profile</a> -->
+                    <form action = "{{ url_for('edit_profile') }}" method = "GET">
+                        <input class = "button" type="submit" value="Edit your profile">
+                    </form>
+                </p>
+
+                {% elif current_user.is_seller == False %}
+                <p>
+                    <!-- url_for('report') -->
+                    <form action = "{{ url_for('report', user_id = seller.id) }}" method = "GET">
+                    <input class = "button" type="submit" value="Report Seller">
+                    </form>
+                </p>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="itemList">
+        {% for item in items %}
+        <div class="item-box">
+            <table>
+                <tr>
+                    <td>
+                        {% include 'vague_item.html' %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {% if current_user.is_seller == False %}
+                            <form action="{{ url_for('add_item',item_id=item.id) }}">
+                                <input class="cartButton" type="submit" value="Add to Cart">
+                            </form> 
+                        {% elif seller == current_user %} <!-- button specific the seller only -->
+                            <form action="{{ url_for('edit_item', item_id = item.id) }}">
+                                <input class="button cartButton" type="submit" value="Edit Item">
+                            </form> 
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    
+    
+    {% if seller == current_user %}
+        <h2> Reports </h2>
+        <table class="table table-bordered table-striped">
+            <tr>
+                <th scope="col">User:</th>
+                <th scope="col">Title:</th>
+                <th scope="col">Report:</th>
+            </tr>
+            {% for report in seller.reports %} <!-- check placement of this for loop. might need to go somewhere else. -->
+            <tr>
+                <td>
+                    {{ report.username }} Says:
+                </td>
+                <td>
+                    {{ report.title }}
+                </td>
+                <td>
+                    {{ report.body }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+<h1>Order History</h1>
+
+    
+    <table class="table table-bordered table-striped">
+        <tr>
+            <th scope="col"> Order: </th>
+            <th scope="col"> Date Purchased: </th>
+            <th scope="col"> Total: </th>
+        </tr>
+        {% for order in orders %}
+        <tr>
+            <td>
+                <b>
+                    Items:
+                </b> 
+                <br>
+                {% for item in order.contains %}
+                    <p>
+                        <a class="linkText" href="{{ url_for('detailed_item', item_id = item.id) }}">{{ item.item_name }}</a> : {{ "$%.2f"|format(item.price) }}
+                        <br>
+                        Seller: <a class="linkText" href="{{ url_for('seller_page', seller_username = item.supplier.username) }}"> {{ item.supplier.username }}</a>
+                        <br>
+                        {% if current_user.is_seller == False %}
+                        <a class="linkText" href="{{ url_for('review_item', item_id = item.id) }}"> Review </a>
+                        {% endif %}
+                    </p>
+                {% endfor %}
+                <!-- Trying to allow a seller report a buyer -->
+                {% if current_user.is_seller == True %}
+                    Report: <a class="removeItem" href="{{ url_for('report', user_id = order.buyer_id) }}"> {{order.buyer_username}} </a>
+                {% endif %}
+            </td>
+            <td>
+                {{ moment(order.purchased_on).format('LL') }} <!-- the date the item was bought-->
+            </td>
+            <td>
+                {{ "$%.2f"|format(order.total) }} <!-- Total price of the item -->
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

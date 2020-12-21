@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+
+    <h1 class="text-center"> {{ name }} </h1>
+    <h2 class="text-center"> Price: ${{ price }} </h2>
+    <h6 class="text-center">Posted: {{ moment(timestamp).format('LL') }}</h6>
+    <div style = "display: table">
+        <div style = "display: table-row">
+            <div style = "display: table-cell">
+                <h4 class="text-left">
+                    About this item:
+                </h4>
+                <div class="item-desc">
+                    {{ description }}
+                </div>
+            </div>
+            <div style = "display: table-cell" class = "item-info">
+                <h4 class="text-left">
+                    Seller: <a class = "linkText" href="{{ url_for('seller_page', seller_username = item.supplier.username) }}"> {{ item.supplier.username }}</a>
+                </h4>
+                {% if item.supplier.about_seller %}
+                    <h5 class="text-left">
+                        {{ item.supplier.about_seller }}
+                    </h5>
+                {% else %}
+                    <h5 class = "text-left">
+                        This seller has not written anything about themselves.
+                    </h5>
+                {% endif %}
+                <br>
+                <h5 class="text-left">
+                    Available: {{ quantity }}
+                </h5>
+                <h5 class="text-left">
+                {% if current_user.is_seller == False %}
+                    <form action="{{ url_for('add_item',item_id=item.id) }}">
+                        <input class="button detailedItemButton" type="submit" value="Add to Cart">
+                    </form>
+                {% elif current_user == item.supplier %} <!-- button specific the seller only -->
+                    <form action="{{ url_for('edit_item', item_id = item.id) }}">
+                        <input class="button detailedItemButton" type="submit" value="Edit Item">
+                    </form>
+                {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div>
+        Rated: {{ "%.1f"|format(rating) }} by {{ rating_count }} users
+    </div>   
+
+    <h2> Reviews </h2>
+    <div class = "review-list">
+        {% for review in reviews %}
+            <div class = "review-box">
+                {% include '_review.html' %}
+            </div>
+        {% endfor %}
+    </div>
+
+{% endblock %}

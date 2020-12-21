@@ -1,0 +1,31 @@
+<table class = "review-table" style = "width:100%" valign="top">
+
+    <tr>
+        <td colspan="3">  
+            <br>
+              <div class="displayname"> {{ review.reviewer.username }}</div>
+          </td>
+        </tr>
+    </tr>
+
+    <tr> 
+        <td colspan="3"><div class="review-title"> {{ review.rating }}: {{review.title}} </div>
+        </td>
+    </tr>
+    <tr>
+        <td width="80%" >                          
+            <div class="review-body"> {{review.body}} </div>
+            <br>
+            <div class="timestamp"> Reviewed on: {{ moment(review.timestamp).format('LLL') }}</div>
+        </td> 
+
+        <td width = "5%">
+            <br>
+            {% if review.reviewer == current_user %}
+                <form action="{{ url_for('delete_review', review_id = review.id) }}" method="post">
+                    <input type="submit" value="Delete">
+                </form>
+            {% endif %}
+        </td>
+    </tr>
+</table>

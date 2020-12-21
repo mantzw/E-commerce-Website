@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <h1> {{ title }}</h1> <!-- Work on styling with bootstrap in later iterations. -->
+
+
+    
+    {% for item in items %}
+    <div class="item-box">
+        <table>
+            <tr>
+                <td>
+                    {% include 'vague_item.html' %}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <!-- <form action = "{{ url_for('remove_item', item_id = item.id) }} " method = "GET">
+                        <input class = "button" type="submit" value="Remove Item">
+                    </form> -->
+                    <a class="removeItem" href="{{ url_for('remove_item', item_id = item.id) }}"> Remove Item </a>
+                </td>
+            </tr>
+        </table>
+    </div>
+        
+    {% endfor %}
+    <br>
+    <br>
+    <table>
+        <tr>
+            <td>
+                Total cost: {{ totalcost }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <!-- button to checkout all of the items in the cart.-->
+                <form action = "{{ url_for('confirm_order') }} " method = "GET">
+                    <input class = "button cartButton" type="submit" value="Checkout">
+                </form>
+            </td>
+        </tr>
+    </table>
+    
+{% endblock %}

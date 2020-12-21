@@ -1,0 +1,99 @@
+<html>
+    <head>
+        <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='css/main.css') }}">
+    </head>
+{% extends 'bootstrap/base.html' %}
+{% block navbar %}
+    <nav class = "navbar navbar-default"  style="background-color: rgb(155, 255, 241)">
+        <div class="container">
+            <div class="nabbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+
+                <a class="navbar-brand" href="{{ url_for('clear_search') }}"> Covid Commerce </a> <!-- Store name on navbar that will redirect back to homepage. -->
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1"> 
+                <!-- These will appear on the left side of the nav bar -->
+                <ul class="nav navbar-nav">
+                    {% if current_user.is_anonymous or current_user.is_seller == False %}
+                        <li>
+                            <a href="{{ url_for('clear_search') }}"> Home </a> <!-- Nav bar link for the home page-->
+                        </li>
+                        <li>
+                        <a href="{{ url_for('cart') }}"> Shopping Cart </a> <!-- Nav bar link for the shopping cart -->
+                        </li>
+                    {% else %}  <!-- Nav bar specific to the seller only -->
+                        <li>
+                            <a href="{{ url_for('index') }}"> Home </a> <!--Nav bar link for the home page -->
+                        </li>
+                        <li>
+                            <a href=""> Search </a> <!--Nav bar link for the search feature,  not implemented yet, just marking position of it on nav bar-->
+                        </li>
+                        <li>
+                           <a href="{{ url_for('seller_items', seller_id = current_user.id) }}"> Edit Items </a> <!-- Nav bar link for the seller to edit items they are selling -->
+                        </li>
+                        <li>
+                           <a href="{{ url_for('seller_page', seller_username = current_user.username) }}"> My Page </a> <!-- Nav bar link for the seller to view seller page -->
+                        </li>
+                        <li>
+                           <a href="{{ url_for('postItem') }}"> Add Item </a> <!--Nav bar link for the seller to add an item they want to sell -->
+                        </li>
+                    {% endif %}
+                </ul>
+
+                <!-- These will appear on the right side of the nav bar -->
+                <ul class="nav navbar-nav navbar-right"> 
+                    {% if current_user.is_anonymous %}
+                        <li>
+                            <a href="{{ url_for('login') }}"> Login </a> <!-- Nav bar link to allow people with accounts to login to their accounts, buyers/sellers -->
+                        </li>
+                        <li>
+                            <a href="{{ url_for('register') }}"> Create Account </a> <!-- Nav bar link that will allow people to create an account, buyer/seller -->
+                        </li>
+                    {% else %} <!-- Nav bar specifics if the user is signed in as a seller -->
+                        <li>
+                            <a href="{{ url_for('order_history') }}"> Order History </a> <!-- Nav bar link that will allow buyer to see previous orders -->
+                        </li>
+                        <!-- <li> -->
+                            <!-- <a href=""> Report </a> Nav bar link that will allow buyer to report seller --> 
+                        <!-- </li> --> <!-- Moved report to the seller page to make it easier to know which seller to report -->
+                        <!-- Need to add a seller reporting a buyer feature. -->
+                        <li>
+                            <a href="{{ url_for('edit_profile') }}"> Profile </a> <!-- Nav bar link that will allow buyers to see their profile, eventually want to view actual profile and have edit profile button that takes user to edit profile -->
+                        </li> <!--currently profile goes to edit_profile instead of profile -->
+                        <li>
+                            <a href="{{ url_for('logout') }}"> Logout </a> <!-- Nav bar link that will allow buyers to logout of their accounts -->
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="container"> <!-- Bootstrap container styling -->
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-info" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- to be able to customize base.html more, added this special block that will be over written by the templates -->
+        {# application content needs to be provided in the app_content block #}
+        {% block app_content %} <!-- need to say block app_content when we want to override this content in other templates -->
+        {% endblock %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ moment.include_moment() }}
+{% endblock %}
+</html>

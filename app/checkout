@@ -1,0 +1,258 @@
+@app.route('/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    buyer_order = Buyerorder(buyer_id = current_user.id, total = 0)
+    buyer = User.query.filter_by(id = current_user.id).first()
+    for item in buyer.in_cart:
+        # Print out all the items left in the cart
+        print_items = buyer.in_cart
+        print("Current cart: ")
+        for print_item in print_items:
+            print("{}".format(print_item.item_name))
+        print()
+        # Print out current item being removed
+        print("Current item: {}".format(item.item_name))
+
+        buyer_order.contains.append(item) # Add each item from the cart to the order
+        supplier = User.query.filter_by(id=item.seller_id).first() # Find the seller of the item
+        if (not (supplier in buyer_order.suppliers.all())): # Check if supplier has already been added to list of suppliers
+            buyer_order.suppliers.append(User.query.filter_by(id=item.seller_id).first()) # Add the seller of an item to the list of suppliers
+        
+        buyer_order.total += item.price # Add the price of the item to total of the order
+
+        print("Next: remove item from cart\n")
+        # item.in_cart_of.remove(buyer) # Remove current user from the carts that the item is in
+        item.num_available -= 1 # Decrement the number of an item that is available
+        item.num_purchased += 1 # Increment the number of an item that is available
+        buyer.in_cart.remove(item) # Item is added to order and removed from cart
+    # Now make the seller orders
+    for seller in buyer_order.suppliers:
+        seller_order = Sellerorder(seller_id = seller.id, total = 0, buyer_id = buyer.id) # Make a new seller order
+        for item in buyer_order.contains:
+            if (item.seller_id == seller.id):
+                seller_order.contains.append(item) # The current seller is the supplier of this item, add the item to the seller order
+                seller_order.total += item.price # Update the total of the order to the seller
+        seller.orders_involved_in.append(buyer_order) # Add the buyer_order to the list of orders that the seller is involved in
+        seller.orders_to.append(seller_order) # Add the seller_order to the list of orders that the seller recieves
+        db.session.add(seller_order) # Add the new seller order
+    db.session.add(buyer_order) # Add the buyer order
+    db.session.commit()
+    return render_template('cart.html', title="Your Cart", items=items.all(), current_user = current_user)
+
+
+Plus models:
+
+from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from app import db, login
+
+@login.user_loader
+def load_user(id):
+    user = User.query.get(int(id))
+    return user
+
+cart = db.Table('cart', # shows the relationship between a buyer and the items in their cart
+    db.Column('buyer_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('item_id', db.Integer, db.ForeignKey('item.id')),
+    db.UniqueConstraint('item_id', 'buyer_id', name='UC_item_id_buyer_id')
+)
+
+itemSellerOrder = db.Table('itemSellerOrder', # shows the relationship between a seller and the items ordered from them
+    db.Column('order_id', db.Integer, db.ForeignKey('sellerorder.id')),
+    db.Column('item_id', db.Integer, db.ForeignKey('item.id'))
+)
+
+itemBuyerOrder = db.Table('itemBuyerOrder', # shows the relationship between a buyer and the items ordered by them
+    db.Column('order_id', db.Integer, db.ForeignKey('buyerorder.id')),
+    db.Column('item_id', db.Integer, db.ForeignKey('item.id'))
+)
+
+sellerBuyerOrder = db.Table('sellerBuyerOrder', # shows the relationship between an order made by a buyer and the sellers selling the items in the order
+    db.Column('order_id', db.Integer, db.ForeignKey('buyerorder.id')),
+    db.Column('seller_id', db.Integer, db.ForeignKey('user.id'))
+)
+
+itemTags = db.Table('itemTags', # shows the relationship between an item and the tags applying to them
+    db.Column('item_id', db.Integer, db.ForeignKey('item.id')),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
+)
+
+class Item(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    item_name = db.Column(db.String(64), index = True)
+    item_description = db.Column(db.String(1500))
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    price = db.Column(db.Float(precision = 2, asdecimal = True))
+    posted_on = db.Column(db.DateTime, default = datetime.utcnow)
+    num_available = db.Column(db.Integer, default = 0)
+    in_cart_of = db.relationship('User', secondary = cart, primaryjoin = (cart.c.item_id == id), backref = db.backref('cart', lazy = 'dynamic'), lazy = 'dynamic') # All of the carts that an item is in
+    num_purchased = db.Column(db.Integer, default = 0)
+    supplied_in = db.relationship('Sellerorder', secondary = itemSellerOrder, primaryjoin = (itemSellerOrder.c.item_id == id), backref = db.backref('itemSellerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the seller orders that an item exists in
+    bought_in = db.relationship('Buyerorder', secondary = itemBuyerOrder, primaryjoin = (itemBuyerOrder.c.item_id == id), backref = db.backref('itemBuyerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the buyer orders that an item exists in
+    tags = db.relationship('Tag', secondary = itemTags, primaryjoin = (itemTags.c.item_id == id), backref = db.backref('itemTags', lazy = 'dynamic'), lazy = 'dynamic') # All of the tags that apply to the item
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20))
+    def __repr__(self):
+        return '<Id: {}, Name: {};>'.format(self.id, self.name)
+    items = db.relationship('Item', secondary = itemTags, primaryjoin = (itemTags.c.tag_id == id), backref = db.backref('itemTags', lazy = 'dynamic'), lazy = 'dynamic') # All of the items with a tag
+
+class Sellerorder(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id')) # The id of the seller who owns this order
+    contains = db.relationship('Item', secondary = itemSellerOrder, primaryjoin = (itemSellerOrder.c.order_id == id), backref = db.backref('itemSellerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the items from the specific supplier owning this Sellerorder
+    purchased_on = db.Column(db.DateTime, default = datetime.utcnow) # Date purchased
+    total = db.Column(db.Float(precision = 2, asdecimal = True)) # The total of all items from the specific supplier owning this Sellerorder
+    buyer_id = db.Column(db.Integer) # The customer who placed this order
+
+class Buyerorder(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('user.id')) # The id of the buyer who owns this order
+    contains = db.relationship('Item', secondary = itemBuyerOrder, primaryjoin = (itemBuyerOrder.c.order_id == id), backref = db.backref('itemBuyerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the items in this order
+    purchased_on = db.Column(db.DateTime, default = datetime.utcnow) # Date purchased
+    suppliers = db.relationship('User', secondary = sellerBuyerOrder, primaryjoin = (sellerBuyerOrder.c.order_id == id), backref = db.backref('sellerBuyerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the items in this order
+    total = db.Column(db.Float(precision = 2, asdecimal = True)) # Total cost of the order
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), index=True, unique=True)
+    email = db.Column(db.String(120), index=True, unique=True)
+    password_hash = db.Column(db.String(128))
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    about_seller = db.Column(db.String(140))
+    address = db.Column(db.String(200))
+    card_number = db.Column(db.String(16))
+    security_code = db.Column(db.String(3))
+    items = db.relationship('Item', backref='supplier', lazy='dynamic')
+    is_seller = db.Column(db.Boolean, default = True)
+    in_cart = db.relationship('Item', secondary = cart, primaryjoin = (cart.c.buyer_id == id), backref = db.backref('cart', lazy = 'dynamic'), lazy = 'dynamic') # All of the items in a buyer's cart
+    orders_to = db.relationship('Sellerorder', backref='supplier', lazy='dynamic') # Order made to a seller
+    orders_by = db.relationship('Buyerorder', backref='customer', lazy='dynamic') # Order made by a buyer
+    orders_involved_in = db.relationship('Buyerorder', secondary = sellerBuyerOrder, primaryjoin = (sellerBuyerOrder.c.seller_id == id), backref = db.backref('sellerBuyerOrder', lazy = 'dynamic'), lazy = 'dynamic') # All of the items in this order
+
+    #report model will be implemented in iteration 3
+    #reports = db.relationship('Report', backref='user', lazy='dynamic')
+
+    #review model will be implemented in iteration 3
+    #reviews = db.relationship('Review', backref='reviewer', lazy='dynamic')
+
+    def __repr__(self):
+        return '<User {} - {};>'.format(self.id, self.username)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def get_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+Plus forms:
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, SelectField, FloatField, IntegerField
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, NumberRange
+from app.models import User, Item
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Sign In')
+
+class PostItemForm(FlaskForm):
+    item_name = StringField('Item name', validators=[DataRequired()])
+    item_description = TextAreaField('Item description', validators=[Length(max=1500)])
+    price = FloatField('Price', validators=[DataRequired(), NumberRange(min = 0.00, max = 1E+20)])
+    num_available = IntegerField('Number available', validators = [DataRequired(), NumberRange(min = 1, max = 1E+20)])
+    submit = SubmitField('Post')
+
+class RegistrationForm(FlaskForm):
+    firstname = StringField('First Name', validators=[DataRequired()])
+    lastname = StringField('Last Name', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    address = TextAreaField('Address', [Length(min=0, max=200)])
+    password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
+    card_number = TextAreaField('Card Number', [Length(min=16, max=16)])
+    security_code = StringField('Security Code', validators=[DataRequired()])
+    buyer_or_seller = SelectField('Will this account be for buying or selling?', choices = [(1, 'Selling'), (2, 'Buying')])
+    submit = SubmitField('Register')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different username.')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different email address.')
+
+
+class EditSellerForm(FlaskForm):
+    firstname = StringField('First Name', validators=[DataRequired()])
+    lastname = StringField('Last Name', validators=[DataRequired()])
+    username = StringField('New Username', validators=[DataRequired()])
+    about_seller = TextAreaField('About me', validators=[Length(min=0, max=140)])
+    email = StringField('New Email', validators=[DataRequired(), Email()])
+    address = TextAreaField('Address', [Length(min=0, max=200)])
+    password = PasswordField('New Password', validators=[DataRequired()])
+    password2 = PasswordField('Repeat New Password', validators=[DataRequired(), EqualTo('password')])
+    card_number = TextAreaField('New Card Number', [Length(min=16, max=16)])
+    security_code = StringField('New Security Code', validators=[DataRequired()])
+    submit = SubmitField('Submit Changes')
+
+    def __init__(self, original_username, original_email, *args, **kwargs):
+        super(EditSellerForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+        self.original_email = original_email
+
+    def validate_username(self, username):
+        if username.data != self.original_username:
+            user = User.query.filter_by(username=username.data).first()
+            if user is not None:
+                raise ValidationError('Please use a different username.')
+
+    def validate_email(self, email):
+        if email.data != self.original_email:
+            user = User.query.filter_by(email=email.data).first()
+            if user is not None:
+                raise ValidationError('Please use a different email.')
+
+
+class EditBuyerForm(FlaskForm):
+    firstname = StringField('First Name', validators=[DataRequired()])
+    lastname = StringField('Last Name', validators=[DataRequired()])
+    username = StringField('New Username', validators=[DataRequired()])
+    email = StringField('New Email', validators=[DataRequired(), Email()])
+    address = TextAreaField('Address', [Length(min=0, max=200)])
+    password = PasswordField('New Password', validators=[DataRequired()])
+    password2 = PasswordField('Repeat New Password', validators=[DataRequired(), EqualTo('password')])
+    card_number = TextAreaField('New Card Number', [Length(min=16, max=16)])
+    security_code = StringField('New Security Code', validators=[DataRequired()])
+    submit = SubmitField('Submit Changes')
+
+    def __init__(self, original_username, original_email, *args, **kwargs):
+        super(EditBuyerForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+        self.original_email = original_email
+
+    def validate_username(self, username):
+        if username.data != self.original_username:
+            user = User.query.filter_by(username=username.data).first()
+            if user is not None:
+                raise ValidationError('Please use a different username.')
+
+    def validate_email(self, email):
+        if email.data != self.original_email:
+            user = User.query.filter_by(email=email.data).first()
+            if user is not None:
+                raise ValidationError('Please use a different email.')
+
+
