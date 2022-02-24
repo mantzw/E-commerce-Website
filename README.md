@@ -16,6 +16,6 @@ Along with the code implementation are documents. These documents include a requ
 
 To run the project:
 
-In the terminal run: set FLASK_DEBUG=1 && python -m flask run
+In the terminal run: `set FLASK_DEBUG=1 && python -m flask run`
 
 
